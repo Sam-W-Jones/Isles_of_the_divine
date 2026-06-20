@@ -1,0 +1,1063 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+<title>The Golden Triangle — A Voyage Through the Setting</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;600;700&family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#f3ecd9;
+    --ink-dim:#cdbfa0;
+    --gold:#e7c489;
+    --gold-deep:#c89a52;
+    --teal:#1f7d8c;
+    --panel:rgba(9,26,34,0.82);
+    --panel-edge:rgba(231,196,137,0.32);
+    --shadow:0 24px 60px rgba(0,0,0,0.55);
+    --display:'Cinzel', 'Times New Roman', serif;
+    --body:'Cormorant Garamond', 'Georgia', serif;
+  }
+  *{ box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  html,body{ margin:0; height:100%; overflow:hidden; background:#06101c; }
+  body{
+    font-family:var(--body);
+    color:var(--ink);
+    -webkit-font-smoothing:antialiased;
+    text-rendering:optimizeLegibility;
+    user-select:none;
+    touch-action:none;
+  }
+  #scene{ position:fixed; inset:0; z-index:0; }
+  canvas{ display:block; }
+
+  /* ---- floating island labels ---- */
+  #labels{ position:fixed; inset:0; z-index:5; pointer-events:none; }
+  .label{
+    position:absolute;
+    transform:translate(-50%,-100%);
+    pointer-events:auto;
+    cursor:pointer;
+    text-align:center;
+    white-space:nowrap;
+    transition:opacity .4s ease, filter .3s ease;
+    will-change:transform;
+  }
+  .label .pin{
+    width:11px; height:11px; margin:0 auto 5px;
+    border-radius:50%;
+    background:radial-gradient(circle at 35% 30%, #fff7e6, var(--gold) 55%, var(--gold-deep));
+    box-shadow:0 0 0 4px rgba(231,196,137,0.16), 0 0 14px rgba(231,196,137,0.5);
+    transition:transform .25s ease, box-shadow .25s ease;
+  }
+  .label .nm{
+    font-family:var(--display);
+    font-size:13px; font-weight:600; letter-spacing:.14em;
+    text-transform:uppercase;
+    color:var(--ink);
+    text-shadow:0 1px 2px #000, 0 0 18px rgba(0,0,0,.8);
+  }
+  .label .sea{
+    display:block;
+    font-family:var(--body); font-style:italic;
+    font-size:12.5px; letter-spacing:.02em;
+    color:var(--gold);
+    text-shadow:0 1px 3px #000;
+    margin-top:1px; opacity:.92;
+  }
+  .label:hover .pin{ transform:scale(1.35); box-shadow:0 0 0 5px rgba(231,196,137,0.22), 0 0 20px rgba(231,196,137,0.75); }
+  .label:hover .nm{ color:#fff; }
+  .label.visited .pin{
+    background:radial-gradient(circle at 35% 30%, #d9fff0, #5ad6b0 55%, #2f9e7e);
+    box-shadow:0 0 0 4px rgba(90,214,176,0.18), 0 0 14px rgba(90,214,176,0.5);
+  }
+  .label.current .pin{ animation:beacon 1.8s ease-in-out infinite; }
+  @keyframes beacon{ 0%,100%{ box-shadow:0 0 0 4px rgba(231,196,137,0.18), 0 0 12px rgba(231,196,137,0.5);} 50%{ box-shadow:0 0 0 8px rgba(231,196,137,0.05), 0 0 26px rgba(231,196,137,0.9);} }
+  .label.faded{ opacity:.62; }
+
+  /* ---- top bar ---- */
+  #topbar{
+    position:fixed; top:0; left:0; right:0; z-index:8;
+    display:flex; align-items:center; justify-content:space-between;
+    padding:16px 22px; pointer-events:none;
+  }
+  #brand{ pointer-events:auto; }
+  #brand .eyebrow{
+    font-family:var(--body); font-style:italic; font-size:14px;
+    letter-spacing:.04em; color:var(--gold); opacity:.9; margin-bottom:-2px;
+  }
+  #brand .ttl{
+    font-family:var(--display); font-weight:600; font-size:17px;
+    letter-spacing:.26em; text-transform:uppercase; color:var(--ink);
+    text-shadow:0 1px 10px rgba(0,0,0,.6);
+  }
+  /* compass */
+  #compass{ width:54px; height:54px; opacity:.85; pointer-events:auto; }
+  #compass .rose{ transform-origin:50% 50%; animation:spin 90s linear infinite; }
+  @keyframes spin{ to{ transform:rotate(360deg);} }
+
+  /* ---- voyage log ---- */
+  #log{
+    position:fixed; left:18px; bottom:18px; z-index:8;
+    width:248px; max-width:calc(100vw - 36px);
+    background:var(--panel);
+    border:1px solid var(--panel-edge);
+    border-radius:13px;
+    backdrop-filter:blur(9px) saturate(120%);
+    -webkit-backdrop-filter:blur(9px) saturate(120%);
+    box-shadow:var(--shadow);
+    overflow:hidden;
+    transition:transform .45s cubic-bezier(.2,.8,.2,1);
+  }
+  #log.tucked{ transform:translateY(calc(100% - 46px)); }
+  #log header{
+    display:flex; align-items:center; justify-content:space-between;
+    padding:11px 14px; cursor:pointer;
+    border-bottom:1px solid rgba(231,196,137,0.14);
+  }
+  #log header .t{
+    font-family:var(--display); font-size:11.5px; font-weight:600;
+    letter-spacing:.2em; text-transform:uppercase; color:var(--gold);
+  }
+  #log header .count{ font-family:var(--body); font-size:14px; color:var(--ink-dim); }
+  #log .chev{ transition:transform .4s ease; color:var(--gold); font-size:12px; }
+  #log.tucked .chev{ transform:rotate(180deg); }
+  #log ul{ list-style:none; margin:0; padding:6px; max-height:46vh; overflow-y:auto; }
+  #log li{
+    display:flex; align-items:center; gap:9px;
+    padding:7px 9px; border-radius:8px; cursor:pointer;
+    font-size:15.5px; color:var(--ink-dim);
+    transition:background .2s ease, color .2s ease;
+  }
+  #log li:hover{ background:rgba(231,196,137,0.08); color:var(--ink); }
+  #log li .dot{
+    width:8px; height:8px; border-radius:50%; flex:none;
+    border:1.5px solid var(--gold-deep); background:transparent;
+  }
+  #log li.done .dot{ background:#5ad6b0; border-color:#5ad6b0; box-shadow:0 0 8px rgba(90,214,176,.6); }
+  #log li.active{ color:var(--ink); background:rgba(231,196,137,0.10); }
+  #log li .n{ font-family:var(--display); font-weight:600; letter-spacing:.04em; }
+
+  /* ---- lore panel (the chart) ---- */
+  #chart{
+    position:fixed; top:0; right:0; bottom:0; z-index:9;
+    width:min(454px, 94vw);
+    transform:translateX(110%);
+    transition:transform .6s cubic-bezier(.16,.84,.24,1);
+    display:flex; flex-direction:column;
+    background:linear-gradient(180deg, rgba(10,28,37,0.93), rgba(7,20,28,0.95));
+    border-left:1px solid var(--panel-edge);
+    backdrop-filter:blur(14px) saturate(120%);
+    -webkit-backdrop-filter:blur(14px) saturate(120%);
+    box-shadow:-30px 0 70px rgba(0,0,0,.5);
+  }
+  #chart.open{ transform:translateX(0); }
+  #chart .scroll{ overflow-y:auto; padding:62px 38px 46px; height:100%; }
+  #chart .marker{
+    font-family:var(--display); font-size:11px; font-weight:600;
+    letter-spacing:.32em; text-transform:uppercase; color:var(--gold-deep);
+    display:flex; align-items:center; gap:12px; margin-bottom:18px;
+  }
+  #chart .marker::after{ content:""; flex:1; height:1px; background:linear-gradient(90deg, var(--gold-deep), transparent); }
+  #chart h2{
+    font-family:var(--display); font-weight:700;
+    font-size:clamp(28px, 4.4vw, 38px); line-height:1.04;
+    margin:0 0 4px; color:var(--ink);
+    letter-spacing:.01em;
+  }
+  #chart .sub{
+    font-family:var(--body); font-style:italic; font-size:18px;
+    color:var(--gold); margin:0 0 22px; letter-spacing:.01em;
+  }
+  #chart .rule{ height:1px; background:linear-gradient(90deg,var(--panel-edge),transparent); margin:0 0 22px; }
+  #chart .body{ font-size:19.5px; line-height:1.62; color:#ece3cd; }
+  #chart .body p{ margin:0 0 16px; }
+  #chart .body p:first-letter{ }
+  #chart .lead::first-letter{
+    font-family:var(--display); font-weight:700;
+    font-size:3.1em; float:left; line-height:.82;
+    padding:6px 10px 0 0; color:var(--gold);
+  }
+  #chart .body ul{ margin:6px 0 16px; padding:0; list-style:none; }
+  #chart .body ul li{
+    position:relative; padding:6px 0 6px 26px; font-style:italic;
+    border-bottom:1px dashed rgba(231,196,137,0.16);
+  }
+  #chart .body ul li::before{
+    content:"\2638"; position:absolute; left:0; top:6px;
+    color:var(--gold-deep); font-style:normal; font-size:15px;
+  }
+  #chart .pull{
+    font-family:var(--display); font-weight:500; font-size:18px;
+    color:var(--gold); text-align:center; letter-spacing:.03em;
+    margin:26px 8px 8px; line-height:1.4;
+  }
+  #chart .foot{
+    margin-top:26px; padding-top:18px;
+    border-top:1px solid rgba(231,196,137,0.14);
+    display:flex; align-items:center; justify-content:space-between; gap:12px;
+  }
+  #chart .hintnext{ font-style:italic; font-size:15px; color:var(--ink-dim); }
+  #chart .close{
+    position:absolute; top:16px; right:18px; z-index:3;
+    width:38px; height:38px; border-radius:50%;
+    border:1px solid var(--panel-edge); background:rgba(0,0,0,.25);
+    color:var(--gold); font-size:18px; cursor:pointer; line-height:1;
+    display:flex; align-items:center; justify-content:center;
+    transition:background .2s ease, transform .2s ease;
+  }
+  #chart .close:hover{ background:rgba(231,196,137,0.14); transform:rotate(90deg); }
+
+  /* ---- hint ---- */
+  #hint{
+    position:fixed; left:50%; bottom:26px; z-index:7;
+    transform:translateX(-50%);
+    font-family:var(--display); font-size:12px; letter-spacing:.28em;
+    text-transform:uppercase; color:var(--gold);
+    text-shadow:0 2px 12px #000; opacity:0; pointer-events:none;
+    transition:opacity .8s ease;
+    text-align:center;
+  }
+  #hint.show{ opacity:.9; animation:hintpulse 3s ease-in-out infinite; }
+  @keyframes hintpulse{ 0%,100%{opacity:.55} 50%{opacity:.95} }
+
+  /* ---- sound toggle ---- */
+  #sound{
+    position:fixed; right:18px; bottom:18px; z-index:8;
+    width:44px; height:44px; border-radius:50%;
+    border:1px solid var(--panel-edge); background:var(--panel);
+    color:var(--gold); cursor:pointer;
+    display:flex; align-items:center; justify-content:center;
+    backdrop-filter:blur(8px); box-shadow:var(--shadow);
+    transition:transform .2s ease, color .2s ease;
+  }
+  #sound:hover{ transform:scale(1.07); }
+  #sound svg{ width:20px; height:20px; }
+  #sound .wave{ opacity:1; transition:opacity .25s; }
+  #sound.muted .wave{ opacity:.18; }
+
+  /* ---- intro overlay ---- */
+  #intro{
+    position:fixed; inset:0; z-index:20;
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    text-align:center; padding:24px;
+    background:radial-gradient(120% 90% at 50% 8%, rgba(15,30,52,0.35), rgba(4,9,18,0.86) 70%);
+    backdrop-filter:blur(2px);
+    transition:opacity 1.1s ease;
+  }
+  #intro .kicker{
+    font-family:var(--body); font-style:italic; font-size:clamp(16px,2.4vw,21px);
+    color:var(--gold); letter-spacing:.04em; margin-bottom:18px; opacity:0;
+  }
+  #intro h1{
+    font-family:var(--display); font-weight:700;
+    font-size:clamp(38px, 8.4vw, 92px); line-height:.96;
+    margin:0; color:var(--ink);
+    letter-spacing:.04em;
+    text-shadow:0 4px 40px rgba(0,0,0,.6);
+    opacity:0;
+  }
+  #intro h1 .small{ display:block; font-size:.42em; letter-spacing:.5em; color:var(--gold); font-weight:500; margin-bottom:.5em; }
+  #intro .blurb{
+    max-width:540px; margin:26px auto 0;
+    font-size:clamp(16px,2.3vw,20px); line-height:1.55; color:var(--ink-dim);
+    opacity:0;
+  }
+  #intro button{
+    margin-top:38px; opacity:0;
+    font-family:var(--display); font-size:14px; font-weight:600;
+    letter-spacing:.26em; text-transform:uppercase;
+    color:#11202a; cursor:pointer;
+    padding:15px 38px; border:none; border-radius:40px;
+    background:linear-gradient(180deg, #f3d7a3, var(--gold) 60%, var(--gold-deep));
+    box-shadow:0 14px 34px rgba(231,196,137,.28), inset 0 1px 0 rgba(255,255,255,.5);
+    transition:transform .2s ease, box-shadow .2s ease;
+  }
+  #intro button:hover{ transform:translateY(-2px); box-shadow:0 20px 44px rgba(231,196,137,.42), inset 0 1px 0 rgba(255,255,255,.5); }
+  #intro .by{ position:absolute; bottom:22px; font-family:var(--display); font-size:10.5px; letter-spacing:.3em; text-transform:uppercase; color:rgba(231,196,137,.5); opacity:0; }
+  #intro.gone{ opacity:0; pointer-events:none; }
+
+  #fail{ position:fixed; inset:0; z-index:30; display:none; align-items:center; justify-content:center; padding:30px; text-align:center; background:#081320; color:var(--ink-dim); font-size:18px; }
+
+  @media (max-width:720px){
+    #chart{ top:auto; width:100vw; height:74vh; border-left:none; border-top:1px solid var(--panel-edge); border-radius:18px 18px 0 0; transform:translateY(110%); }
+    #chart.open{ transform:translateY(0); }
+    #chart .scroll{ padding:40px 24px 38px; }
+    #chart .body{ font-size:18px; }
+    #log{ width:210px; }
+    #topbar{ padding:12px 16px; }
+    #brand .ttl{ font-size:13px; letter-spacing:.18em; }
+    #compass{ width:44px; height:44px; }
+  }
+  @media (prefers-reduced-motion:reduce){
+    #compass .rose, #hint.show{ animation:none !important; }
+  }
+</style>
+</head>
+<body>
+  <div id="scene"></div>
+  <div id="labels"></div>
+
+  <div id="topbar">
+    <div id="brand">
+      <div class="eyebrow">Wind, waves, and an endless horizon</div>
+      <div class="ttl">The Golden Triangle</div>
+    </div>
+    <svg id="compass" viewBox="0 0 100 100" aria-hidden="true">
+      <circle cx="50" cy="50" r="46" fill="none" stroke="rgba(231,196,137,.4)" stroke-width="1.5"/>
+      <circle cx="50" cy="50" r="38" fill="none" stroke="rgba(231,196,137,.18)" stroke-width="1"/>
+      <g class="rose" fill="#e7c489">
+        <polygon points="50,8 55,46 50,50 45,46" opacity=".95"/>
+        <polygon points="50,92 45,54 50,50 55,54" opacity=".5"/>
+        <polygon points="92,50 54,55 50,50 54,45" opacity=".7"/>
+        <polygon points="8,50 46,45 50,50 46,55" opacity=".7"/>
+        <polygon points="74,26 55,45 56,44 74,26" opacity=".35"/>
+      </g>
+      <circle cx="50" cy="50" r="3" fill="#f3ecd9"/>
+      <text x="50" y="20" text-anchor="middle" font-family="Cinzel,serif" font-size="9" fill="#f3ecd9">N</text>
+    </svg>
+  </div>
+
+  <div id="log" class="tucked">
+    <header id="logHead">
+      <span class="t">Voyage Log</span>
+      <span><span class="count" id="logCount">0 / 9 charted</span> <span class="chev">▾</span></span>
+    </header>
+    <ul id="logList"></ul>
+  </div>
+
+  <button id="sound" class="muted" title="Ocean ambience">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round">
+      <path d="M4 14c2 0 2-2 4-2s2 2 4 2 2-2 4-2 2 2 4 2"/>
+      <path class="wave" d="M4 9c2 0 2-2 4-2s2 2 4 2 2-2 4-2 2 2 4 2" opacity=".7"/>
+      <path class="wave" d="M4 19c2 0 2-2 4-2s2 2 4 2 2-2 4-2 2 2 4 2" opacity=".4"/>
+    </svg>
+  </button>
+
+  <div id="chart">
+    <button class="close" id="chartClose" aria-label="Close">✕</button>
+    <div class="scroll" id="chartScroll"></div>
+  </div>
+
+  <div id="hint">Tap an island to set sail</div>
+
+  <div id="intro">
+    <div class="kicker">An introduction to the setting</div>
+    <h1><span class="small">A Voyage Through</span>The Golden Triangle</h1>
+    <p class="blurb">The world is ocean. Land is rare enough to seem incidental — a scatter of islands rising from unfathomable depths, each shaped by powers older than any kingdom. Chart your course and discover the sea you will sail.</p>
+    <button id="begin">Set Sail</button>
+    <div class="by">Beneath Arohena · Hinaroa · Fetuariki</div>
+  </div>
+
+  <div id="fail">This voyage needs a browser with WebGL enabled. Try a recent version of Chrome, Safari, Firefox, or Edge.</div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+  <script id="app">
+  (function(){
+    "use strict";
+
+    // ----------------------------------------------------------------------
+    //  CONTENT  — player-facing introduction, one station per island
+    // ----------------------------------------------------------------------
+    const STATIONS = [
+      {
+        name:"The Great Ocean", sea:"the world entire", type:"home",
+        pos:[-6, 10],
+        body:`<p class="lead">Wind and waves, and an endless horizon. Beneath Arohena the sun, Hinaroa the moon, and the far stars of Fetuariki, the Great Ocean stretches across all the known world.</p>
+        <p>The world is ocean. Land is rare enough to seem incidental — slivers of rock and sand rising from unfathomable depths. For most people the sea is not the edge of the world but its foundation. It feeds nations, carries ships, shapes belief, and binds distant islands into a single living web.</p>
+        <p>To live here is to live by sail, current, and star. The sea gives life, and the sea takes it. To master it is to hold power; to forget it is to be lost. The ocean does not notice you. The ocean does not care.</p>`,
+        pull:"The sea is older than any kingdom, and no mortal power can ever truly claim it."
+      },
+      {
+        name:"The Golden Triangle", sea:"the heart of the world", type:"volcano",
+        pos:[-30,-8],
+        body:`<p class="lead">Most of the world's known islands lie within the Golden Triangle, the great equatorial archipelago at the heart of all civilization.</p>
+        <p>Early navigators named it for two things: the favourable currents that made passage possible, and the wealth that flowed along those same routes. To most who live within it, the Triangle is not merely a region. It is the world.</p>
+        <p>Dozens of great islands and more than a hundred lesser ones lie within its bounds — and each is a world unto itself, with its own history, its own people, its own customs and gods. Two islands a few days' sail apart may differ as sharply as foreign nations.</p>
+        <p>It is no true triangle on any map. The name endures not for its shape, but for what it holds: the wealth of the known world, and the web of routes that bind it together.</p>`,
+        pull:"Beyond its bounds lie only the Shadow Isles, and the frozen poles at the ends of the earth."
+      },
+      {
+        name:"The Divine Beasts", sea:"powers that shape the land", type:"divine",
+        pos:[24,-4],
+        body:`<p class="lead">Upon islands great and small dwell the Divine Beasts — immense, mythical beings whose mere presence reshapes the land around them.</p>
+        <p>Where one slumbers, jungles may flower. Where another hunts, storms gather. Reefs rise, volcanoes burn, rivers swell, and strange riches emerge from the touch of the divine. An island touched by a Beast becomes unlike any other.</p>
+        <p>No two are alike. One brings abundance and calm seas; another rings its island with reef and flame. One is worshipped openly as a god, another feared in the next harbour as a destroyer.</p>
+        <p>Some peoples bow in worship. Some bargain. Some simply endure. However they are understood, the Beasts are the powers in whose shadow every nation is built.</p>`,
+        pull:"Their tempers and gifts differ as widely as the islands themselves."
+      },
+      {
+        name:"Peoples of the Triangle", sea:"a thousand shores", type:"atoll",
+        pos:[-36,22],
+        body:`<p class="lead">The peoples of the Triangle are shaped by sea, weather, and distance — and few are untouched by voyaging.</p>
+        <p>Some are fisher-villages and reef settlements, bound tightly to a single island and its sacred traditions. Others are great mercantile ports, linking distant peoples through barter and diplomacy. Still others are raiders, navigators, pilgrims, or wandering clans who call no land home — only sail and star.</p>
+        <p>Everywhere, knowledge of the sea is prized. Navigators, shipwrights, fishers, traders, priests, and storytellers all hold places of honour. And almost everywhere, a people's bond with its local Beast shapes its faith, its trade, its rulers, and its taboos.</p>`,
+        pull:"Some define home not by land, but by sail and star."
+      },
+      {
+        name:"Faith & the Heavens", sea:"sun, moon, and ancestors", type:"shrine",
+        pos:[3,-28],
+        body:`<p class="lead">Across the Triangle, the sea is rarely thought to be empty. It is watched, read, and interpreted through a thousand traditions.</p>
+        <p>Sailors pray before voyages; priests read omens in tide and storm; island communities keep rites tied to sun, moon, stars, ancestors, and Beast. Many peoples honour great celestial powers — of Arohena, Hinaroa, and the wheeling stars — though their names and rites differ from one island to the next. These are seen as guides and watchers, ordering forces above the ever-changing sea.</p>
+        <p>Yet most daily devotion is given to what is near at hand: a Beast, a reef, a mountain, a spring, a current, a burial place, or a long line of ancestors.</p>`,
+        pull:"The heavens guide; the home shore is what one prays to."
+      },
+      {
+        name:"Trade & Rivalry", sea:"where wealth crosses water", type:"port",
+        pos:[36,20],
+        body:`<p class="lead">No two islands offer the same gifts — and from that uneven bounty comes the whole web of commerce and conflict.</p>
+        <p>One island has rich soil; another has pearls, rare timber, volcanic glass, sacred herbs, or stranger divine byproducts. No island possesses everything it needs, so trade becomes the lifeblood of the world. Great ports rise where the sea-lanes converge; lesser communities survive by offering safe harbour, skilled pilots, or rare goods.</p>
+        <p>But where wealth travels, so too do ambition and violence. Rivalry over routes, resources, fishing waters, tribute, and divine favour erupts as diplomacy and marriage alliance — or as monopoly, raid, and open war.</p>`,
+        pull:"The trade winds carry both fortune and fleets of war."
+      },
+      {
+        name:"The Drowned", sea:"the fear of every sailor", type:"drowned",
+        pos:[-3,36],
+        body:`<p class="lead">Every sailor fears the Drowned — wraith-like spirits that rise from the sea, most often at night.</p>
+        <p>They drift over the waves, faces veiled in torn cloth and kelp, eyes burning like low embers beneath. Their rags are hung with the sea's jetsam: broken shells, drowned wood, rusted charms, strips of weed. They do not speak. They scream.</p>
+        <p>An attack begins with silence. The slap of waves fades. The wind drops. Lantern flames gutter blue-green. Then faint lights stir beneath the surface, the sea breaks, and they rise — boarding with rusted iron, dragging sailors under with cold hands and cords of weed.</p>
+        <p>They can be fought. Keen iron bites them; fire drives them back. But for a small vessel an attack is often a death sentence. When the sea goes quiet and the water below begins to glow, a wise captain does not seek glory.</p>`,
+        pull:"Douse the loose lights. Ready iron. And pray there is still wind enough to run."
+      },
+      {
+        name:"The Shadow Isles", sea:"beyond the charted lanes", type:"spire",
+        pos:[-48,-30],
+        body:`<p class="lead">Beyond the charted lanes lie the Shadow Isles — remote, poorly mapped, half-lost to storm, distance, and rumour.</p>
+        <p>They are spoken of in the same breath as disappearances, strange weather, and old stories. Farther still, at the ends of the world, the polar caps sleep beneath crowns of frost. What passes in those far places, few can say — and fewer still can claim to have seen them and returned alive.</p>
+        <p>The sailors trade their legends in low voices:</p>
+        <ul>
+          <li>Some isles appear only under certain moons.</li>
+          <li>There are waters where the stars vanish from the sky.</li>
+          <li>Certain routes can be sailed only with the proper offerings.</li>
+          <li>Some islands are not fixed at all, but drift.</li>
+        </ul>`,
+        pull:"They are the last high places of a world the sea has nearly forgotten."
+      },
+      {
+        name:"Your Voyage", sea:"choose your heading", type:"depart",
+        pos:[28,38],
+        body:`<p class="lead">Adventure here begins with movement. You will travel by sea between islands shaped by different powers, customs, and dangers.</p>
+        <p>A voyage may carry you into trade disputes and sacred obligations, political intrigue and monster-haunted reefs, unknown ruins and lands thought lost to the world. You might serve aboard a voyaging ship, escort tribute, chart unknown waters, recover sacred relics, raid and privateer, or sail to confront the Shadow Isles themselves.</p>
+        <p>Before you set sail, consider:</p>
+        <ul>
+          <li>Where is your home island, and what is it known for?</li>
+          <li>How does your people view the Beast that shapes your homeland?</li>
+          <li>Why did you leave — duty, faith, exile, hunger, ambition, debt, curiosity, grief?</li>
+          <li>How do you feel about the sea: freedom, fear, reverence, necessity?</li>
+          <li>What do you seek beyond the horizon?</li>
+        </ul>`,
+        pull:"Every horizon promises both opportunity and risk. Now — choose your heading."
+      }
+    ];
+
+    // sea-lanes between stations (loose web of routes)
+    const ROUTES = [[0,1],[0,2],[0,4],[0,6],[1,3],[1,7],[2,5],[2,4],[5,8],[6,8]];
+
+    // ----------------------------------------------------------------------
+    //  BOOT
+    // ----------------------------------------------------------------------
+    const sceneEl = document.getElementById('scene');
+    let renderer;
+    try{
+      renderer = new THREE.WebGLRenderer({ antialias:true, alpha:false });
+    }catch(e){
+      document.getElementById('fail').style.display='flex';
+      document.getElementById('intro').style.display='none';
+      return;
+    }
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    sceneEl.appendChild(renderer.domElement);
+
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(48, window.innerWidth/window.innerHeight, 0.5, 2000);
+
+    // palette
+    const COL = {
+      deep:    new THREE.Color(0.035,0.205,0.275),
+      shallow: new THREE.Color(0.105,0.49,0.55),
+      skyTop:  new THREE.Color(0.043,0.063,0.18),
+      horizon: new THREE.Color(0.86,0.60,0.40),
+      skyLow:  new THREE.Color(0.20,0.11,0.18),
+      sun:     new THREE.Color(1.0,0.84,0.60)
+    };
+    const SUN_DIR = new THREE.Vector3(-0.34,0.085,-1.0).normalize();
+    scene.fog = new THREE.FogExp2(COL.horizon.getHex(), 0.0); // placeholder, manual fog in shader
+
+    // ---- shared wave function (JS mirror of the GLSL) ----
+    function waveHeight(x,z,t){
+      let h = 0.0;
+      h += Math.sin(x*0.080 + t*0.80) * 1.20;
+      h += Math.sin(z*0.100 + t*0.60) * 1.00;
+      h += Math.sin((x+z)*0.060 + t*1.10) * 0.80;
+      h += Math.cos((x-z)*0.090 - t*0.70) * 0.60;
+      return h;
+    }
+
+    // ---- SKY DOME ----
+    const skyGeo = new THREE.SphereGeometry(900, 32, 24);
+    const skyMat = new THREE.ShaderMaterial({
+      side:THREE.BackSide, depthWrite:false, fog:false,
+      uniforms:{
+        uTop:{value:COL.skyTop}, uHorizon:{value:COL.horizon}, uLow:{value:COL.skyLow},
+        uSun:{value:COL.sun}, uSunDir:{value:SUN_DIR}
+      },
+      vertexShader:`
+        varying vec3 vDir;
+        void main(){ vDir = normalize(position); gl_Position = projectionMatrix*modelViewMatrix*vec4(position,1.0); }`,
+      fragmentShader:`
+        precision highp float;
+        varying vec3 vDir;
+        uniform vec3 uTop,uHorizon,uLow,uSun,uSunDir;
+        void main(){
+          float t = vDir.y;
+          vec3 col;
+          if(t>0.0) col = mix(uHorizon, uTop, pow(clamp(t,0.0,1.0),0.62));
+          else      col = mix(uHorizon, uLow, pow(clamp(-t,0.0,1.0),0.5));
+          float s = max(dot(vDir, uSunDir),0.0);
+          col += uSun * pow(s,9.0)*0.9;
+          col += uSun * pow(s,2.2)*0.22;
+          gl_FragColor = vec4(col,1.0);
+        }`
+    });
+    scene.add(new THREE.Mesh(skyGeo, skyMat));
+
+    // ---- STARS ----
+    (function(){
+      const N=720, pos=new Float32Array(N*3), ph=new Float32Array(N), sz=new Float32Array(N);
+      for(let i=0;i<N;i++){
+        const u=Math.random(), v=Math.random()*0.92+0.06;
+        const theta=u*Math.PI*2, y=v, r=Math.sqrt(1-y*y);
+        const R=820;
+        pos[i*3]=Math.cos(theta)*r*R; pos[i*3+1]=y*R; pos[i*3+2]=Math.sin(theta)*r*R;
+        ph[i]=Math.random()*6.28; sz[i]=Math.random()*Math.random()*2.4+0.6;
+      }
+      const g=new THREE.BufferGeometry();
+      g.setAttribute('position',new THREE.BufferAttribute(pos,3));
+      g.setAttribute('aPhase',new THREE.BufferAttribute(ph,1));
+      g.setAttribute('aSize',new THREE.BufferAttribute(sz,1));
+      const m=new THREE.ShaderMaterial({
+        transparent:true, depthWrite:false, blending:THREE.AdditiveBlending, fog:false,
+        uniforms:{uTime:{value:0}},
+        vertexShader:`
+          attribute float aPhase, aSize; uniform float uTime; varying float vTw;
+          void main(){ vTw=0.45+0.55*sin(uTime*1.4+aPhase);
+            vec4 mv=modelViewMatrix*vec4(position,1.0);
+            gl_PointSize=aSize*(620.0/-mv.z); gl_Position=projectionMatrix*mv; }`,
+        fragmentShader:`
+          precision highp float; varying float vTw;
+          void main(){ vec2 c=gl_PointCoord-0.5; float d=length(c);
+            float a=smoothstep(0.5,0.0,d); gl_FragColor=vec4(vec3(1.0,0.96,0.88), a*(0.25+0.75*vTw)); }`
+      });
+      scene.add(new THREE.Points(g,m));
+    })();
+
+    // ---- helper glow sprite (sun & moon) ----
+    function glowTex(inner, outer){
+      const c=document.createElement('canvas'); c.width=c.height=128;
+      const x=c.getContext('2d'); const g=x.createRadialGradient(64,64,2,64,64,64);
+      g.addColorStop(0,inner); g.addColorStop(0.35,inner); g.addColorStop(1,outer);
+      x.fillStyle=g; x.fillRect(0,0,128,128);
+      const tx=new THREE.Texture(c); tx.needsUpdate=true; return tx;
+    }
+    function discSprite(tex, size, dir, dist){
+      const m=new THREE.SpriteMaterial({map:tex, transparent:true, depthWrite:false, depthTest:false, blending:THREE.AdditiveBlending, fog:false});
+      const s=new THREE.Sprite(m); s.scale.set(size,size,1);
+      s.position.copy(dir.clone().multiplyScalar(dist)); return s;
+    }
+    scene.add(discSprite(glowTex('rgba(255,232,190,1)','rgba(255,170,90,0)'), 150, SUN_DIR, 760));
+    scene.add(discSprite(glowTex('rgba(231,234,255,0.95)','rgba(150,170,220,0)'), 70, new THREE.Vector3(0.62,0.46,0.55).normalize(), 760));
+
+    // ---- OCEAN ----
+    const oceanGeo = new THREE.PlaneGeometry(1100, 1100, 220, 220);
+    oceanGeo.rotateX(-Math.PI/2);
+    const oceanMat = new THREE.ShaderMaterial({
+      fog:false,
+      extensions:{ derivatives:true },
+      uniforms:{
+        uTime:{value:0},
+        uDeep:{value:COL.deep}, uShallow:{value:COL.shallow},
+        uSun:{value:COL.sun}, uSunDir:{value:SUN_DIR}, uHorizon:{value:COL.horizon},
+        uFogColor:{value:COL.horizon}, uFogNear:{value:165.0}, uFogFar:{value:640.0}
+      },
+      vertexShader:`
+        uniform float uTime; varying float vH; varying vec3 vW;
+        float wave(float x,float z,float t){
+          float h=0.0;
+          h+=sin(x*0.080+t*0.80)*1.20;
+          h+=sin(z*0.100+t*0.60)*1.00;
+          h+=sin((x+z)*0.060+t*1.10)*0.80;
+          h+=cos((x-z)*0.090-t*0.70)*0.60;
+          return h;
+        }
+        void main(){
+          vec3 p=position; float h=wave(p.x,p.z,uTime); p.y+=h; vH=h;
+          vec4 wp=modelMatrix*vec4(p,1.0); vW=wp.xyz;
+          gl_Position=projectionMatrix*viewMatrix*wp;
+        }`,
+      fragmentShader:`
+        precision highp float;
+        uniform vec3 uDeep,uShallow,uSun,uSunDir,uHorizon,uFogColor;
+        uniform float uFogNear,uFogFar;
+        varying float vH; varying vec3 vW;
+        void main(){
+          vec3 n=normalize(cross(dFdx(vW),dFdy(vW)));
+          float hf=clamp((vH+2.0)/4.0,0.0,1.0);
+          vec3 col=mix(uDeep,uShallow,hf);
+          float foam=smoothstep(1.5,2.2,vH);
+          col=mix(col,vec3(0.86,0.93,0.95),foam*0.5);
+          vec3 viewDir=normalize(cameraPosition-vW);
+          vec3 hv=normalize(uSunDir+viewDir);
+          float spec=pow(max(dot(n,hv),0.0),80.0);
+          col+=uSun*spec*1.4;
+          float gl=pow(max(dot(n,hv),0.0),12.0);
+          col+=uSun*gl*0.18;
+          float fres=pow(1.0-max(dot(n,viewDir),0.0),3.0);
+          col=mix(col,uHorizon,fres*0.45);
+          float dist=length(cameraPosition-vW);
+          float fogF=smoothstep(uFogNear,uFogFar,dist);
+          col=mix(col,uFogColor,fogF);
+          gl_FragColor=vec4(col,1.0);
+        }`
+    });
+    const ocean = new THREE.Mesh(oceanGeo, oceanMat);
+    scene.add(ocean);
+
+    // simple lights for islands/ship (standard materials)
+    scene.add(new THREE.HemisphereLight(0xbfd8e0, 0x20323a, 0.85));
+    const sunLight = new THREE.DirectionalLight(0xffe2b0, 1.05);
+    sunLight.position.copy(SUN_DIR.clone().multiplyScalar(200));
+    scene.add(sunLight);
+    const warmFill = new THREE.DirectionalLight(0xffb070, 0.4);
+    warmFill.position.set(-60,40,-120); scene.add(warmFill);
+
+    // ---- ISLAND BUILDERS ----
+    function mat(hex, rough, flat){ return new THREE.MeshStandardMaterial({color:hex, roughness:rough===undefined?0.95:rough, metalness:0.0, flatShading:!!flat}); }
+    const SAND=mat(0xd9c08a,1.0), ROCK=mat(0x6f5a45,0.95,true), GREEN=mat(0x3f7547,0.95,true),
+          DARK=mat(0x2c3340,0.9,true), TRUNK=mat(0x7a5a38,1.0), FROND=mat(0x4f8a4a,0.9,true),
+          LAVA=mat(0x8a3a2a,0.85,true), STONEW=mat(0xb9b0a0,0.9,true), GLOWR=mat(0x3a5a52,0.8,true);
+
+    function palm(x,z,s){
+      const g=new THREE.Group();
+      const tr=new THREE.Mesh(new THREE.CylinderGeometry(0.10*s,0.18*s,2.4*s,6), TRUNK);
+      tr.position.y=1.2*s; tr.rotation.z=(Math.random()-0.5)*0.3; g.add(tr);
+      for(let i=0;i<5;i++){
+        const fr=new THREE.Mesh(new THREE.ConeGeometry(0.16*s,1.5*s,4), FROND);
+        fr.position.y=2.3*s; fr.rotation.z=Math.PI/2.6; fr.rotation.y=i*1.256;
+        fr.position.x=Math.cos(i*1.256)*0.6*s; fr.position.z=Math.sin(i*1.256)*0.6*s;
+        g.add(fr);
+      }
+      g.position.set(x,0,z); return g;
+    }
+
+    function buildStation(st){
+      const g=new THREE.Group();
+      const t=st.type;
+      // underwater skirt (hidden by opaque ocean) keeps no gap at waterline
+      function skirt(rTop,rBot,topY){
+        const h=topY+14;
+        const sk=new THREE.Mesh(new THREE.CylinderGeometry(rTop,rBot,h,18), SAND);
+        sk.position.y=topY-h/2; return sk;
+      }
+      if(t==="drowned"){
+        // ominous rocks on open water, eerie glow — not a lush isle
+        for(let i=0;i<5;i++){
+          const r=new THREE.Mesh(new THREE.ConeGeometry(1.1+Math.random(),3+Math.random()*3,5), DARK);
+          const a=Math.random()*6.28, d=Math.random()*4;
+          r.position.set(Math.cos(a)*d, 1.6+Math.random(), Math.sin(a)*d);
+          r.rotation.set((Math.random()-.5)*.4,Math.random()*6,(Math.random()-.5)*.4);
+          g.add(r);
+        }
+        const glow=new THREE.PointLight(0x36e0a0, 2.4, 26); glow.position.y=2.0; g.add(glow);
+        const orb=new THREE.Mesh(new THREE.SphereGeometry(0.7,12,12), new THREE.MeshBasicMaterial({color:0x4affc0}));
+        orb.position.y=2.2; g.add(orb); g.userData.glowOrb=orb;
+        g.userData.hit=4.5;
+      } else if(t==="spire"){
+        g.add(skirt(3.2,5.5,3.0));
+        const base=new THREE.Mesh(new THREE.CylinderGeometry(3.0,4.0,1.6,12), DARK); base.position.y=2.6; g.add(base);
+        const sp=new THREE.Mesh(new THREE.ConeGeometry(2.2,12,6), DARK); sp.position.y=9; g.add(sp);
+        const sp2=new THREE.Mesh(new THREE.ConeGeometry(1.1,7,5), DARK); sp2.position.set(2.4,5.5,-1.5); sp2.rotation.z=0.2; g.add(sp2);
+        g.userData.hit=6;
+      } else if(t==="atoll"){
+        g.add(skirt(5.0,7.0,2.6));
+        const ring=new THREE.Mesh(new THREE.TorusGeometry(4.6,1.1,8,20), SAND); ring.rotation.x=Math.PI/2; ring.position.y=3.0; g.add(ring);
+        const lag=new THREE.Mesh(new THREE.CylinderGeometry(3.8,3.8,0.4,20), mat(0x2aa39a,0.6)); lag.position.y=2.9; g.add(lag);
+        g.add(palm(2.8,1.5,1.0)); g.add(palm(-2.4,-2.2,0.9));
+        g.userData.hit=7;
+      } else if(t==="port"){
+        g.add(skirt(5.0,7.5,3.0));
+        const isle=new THREE.Mesh(new THREE.CylinderGeometry(5.0,6.0,1.4,16), SAND); isle.position.y=2.8; g.add(isle);
+        const hill=new THREE.Mesh(new THREE.ConeGeometry(3.2,3.5,10), GREEN); hill.position.y=5.4; g.add(hill);
+        // little docks
+        for(let i=0;i<3;i++){
+          const d=new THREE.Mesh(new THREE.BoxGeometry(0.5,0.4,3.5), TRUNK);
+          const a=i*2.1; d.position.set(Math.cos(a)*5.5,3.2,Math.sin(a)*5.5); d.lookAt(0,3.2,0); g.add(d);
+        }
+        g.add(palm(3,2,1.0)); g.add(palm(-3,1.5,1.0)); g.add(palm(0.5,-3,0.9));
+        g.userData.hit=8;
+      } else if(t==="shrine"){
+        g.add(skirt(4.6,6.5,3.0));
+        const isle=new THREE.Mesh(new THREE.CylinderGeometry(4.6,5.6,1.4,14), SAND); isle.position.y=2.8; g.add(isle);
+        const hill=new THREE.Mesh(new THREE.ConeGeometry(3.0,3.2,9), GREEN); hill.position.y=5.2; g.add(hill);
+        // standing stones
+        for(let i=0;i<5;i++){
+          const s=new THREE.Mesh(new THREE.BoxGeometry(0.5,2.4,0.5), STONEW);
+          const a=i/5*6.28; s.position.set(Math.cos(a)*3.4,4.5,Math.sin(a)*3.4); g.add(s);
+        }
+        const cap=new THREE.Mesh(new THREE.TorusGeometry(3.4,0.25,6,18), STONEW); cap.rotation.x=Math.PI/2; cap.position.y=5.8; g.add(cap);
+        g.userData.hit=7;
+      } else if(t==="divine"){
+        g.add(skirt(6.0,8.5,3.2));
+        const isle=new THREE.Mesh(new THREE.CylinderGeometry(6.0,7.5,1.6,18), SAND); isle.position.y=2.9; g.add(isle);
+        const mtn=new THREE.Mesh(new THREE.ConeGeometry(4.6,8.0,8), ROCK); mtn.position.y=7.5; g.add(mtn);
+        const cap=new THREE.Mesh(new THREE.ConeGeometry(1.6,2.2,8), LAVA); cap.position.y=11.2; g.add(cap);
+        const gl=new THREE.PointLight(0xff7a3a,1.6,30); gl.position.y=11; g.add(gl);
+        g.add(palm(4,3,1.1)); g.add(palm(-4,2,1.1)); g.add(palm(2,-4,1.0)); g.add(palm(-3,-3.5,1.0));
+        g.userData.hit=9;
+      } else if(t==="home"){
+        g.add(skirt(5.2,7.2,3.0));
+        const isle=new THREE.Mesh(new THREE.CylinderGeometry(5.2,6.4,1.6,16), SAND); isle.position.y=2.9; g.add(isle);
+        const hill=new THREE.Mesh(new THREE.ConeGeometry(3.4,3.8,10), GREEN); hill.position.y=5.6; g.add(hill);
+        const hut=new THREE.Mesh(new THREE.ConeGeometry(1.3,1.6,4), mat(0xbf9152,1.0)); hut.position.set(2.6,4.2,1.6); g.add(hut);
+        g.add(palm(3.2,2.4,1.1)); g.add(palm(-3,2,1.0)); g.add(palm(0,-3.5,1.0));
+        g.userData.hit=8;
+      } else { // volcano (golden triangle)
+        g.add(skirt(5.6,7.8,3.1));
+        const isle=new THREE.Mesh(new THREE.CylinderGeometry(5.6,7.0,1.5,16), SAND); isle.position.y=2.9; g.add(isle);
+        const mtn=new THREE.Mesh(new THREE.ConeGeometry(4.2,7.0,9), ROCK); mtn.position.y=6.8; g.add(mtn);
+        const green=new THREE.Mesh(new THREE.ConeGeometry(4.6,3.0,9), GREEN); green.position.y=4.6; g.add(green);
+        g.add(palm(3.6,2.6,1.1)); g.add(palm(-3.4,2,1.0)); g.add(palm(1,-4,1.0));
+        g.userData.hit=8.5;
+      }
+      return g;
+    }
+
+    // place stations
+    const stationObjs=[];
+    STATIONS.forEach((st,i)=>{
+      const g=buildStation(st);
+      g.position.set(st.pos[0],0,st.pos[1]);
+      g.userData.index=i;
+      scene.add(g);
+      stationObjs.push(g);
+    });
+
+    // ---- SEA-LANES (dashed gold arcs) ----
+    function arcPoints(a,b,lift){
+      const A=new THREE.Vector3(STATIONS[a].pos[0],0.5,STATIONS[a].pos[1]);
+      const B=new THREE.Vector3(STATIONS[b].pos[0],0.5,STATIONS[b].pos[1]);
+      const mid=A.clone().add(B).multiplyScalar(0.5);
+      const dir=B.clone().sub(A); const len=dir.length();
+      const perp=new THREE.Vector3(-dir.z,0,dir.x).normalize();
+      mid.add(perp.multiplyScalar(len*0.14*(lift||1)));
+      const pts=[]; const N=44;
+      for(let i=0;i<=N;i++){ const t=i/N;
+        const p=new THREE.Vector3()
+          .addScaledVector(A,(1-t)*(1-t))
+          .addScaledVector(mid,2*(1-t)*t)
+          .addScaledVector(B,t*t);
+        p.y=0.6; pts.push(p);
+      }
+      return pts;
+    }
+    ROUTES.forEach(([a,b])=>{
+      const pts=arcPoints(a,b);
+      const g=new THREE.BufferGeometry().setFromPoints(pts);
+      const m=new THREE.LineDashedMaterial({color:0xe7c489, transparent:true, opacity:0.22, dashSize:2.2, gapSize:2.4});
+      const line=new THREE.Line(g,m); line.computeLineDistances();
+      scene.add(line);
+    });
+
+    // ---- SHIP (outrigger canoe) ----
+    const ship=new THREE.Group();
+    (function(){
+      const hull=new THREE.Mesh(new THREE.BoxGeometry(0.9,0.5,4.2), mat(0x5a3a22,0.9,true)); hull.position.y=0.25; ship.add(hull);
+      const prow=new THREE.Mesh(new THREE.ConeGeometry(0.45,1.1,4), mat(0x4a2f1c,0.9,true)); prow.rotation.x=Math.PI/2; prow.position.set(0,0.3,2.4); ship.add(prow);
+      const stern=new THREE.Mesh(new THREE.ConeGeometry(0.4,0.8,4), mat(0x4a2f1c,0.9,true)); stern.rotation.x=-Math.PI/2; stern.position.set(0,0.35,-2.2); ship.add(stern);
+      // outrigger
+      const out=new THREE.Mesh(new THREE.CylinderGeometry(0.16,0.16,3.0,6), mat(0x6b4427,0.9)); out.rotation.x=Math.PI/2; out.position.set(-1.7,-0.05,0); ship.add(out);
+      [-1.0,1.0].forEach(z=>{ const s=new THREE.Mesh(new THREE.BoxGeometry(1.8,0.12,0.16), TRUNK); s.position.set(-0.85,0.18,z); ship.add(s); });
+      // mast
+      const mast=new THREE.Mesh(new THREE.CylinderGeometry(0.06,0.08,3.3,6), TRUNK); mast.position.set(0,1.85,-0.1); mast.rotation.x=-0.06; ship.add(mast);
+      // crab-claw sail (single triangle)
+      const sg=new THREE.BufferGeometry();
+      sg.setAttribute('position', new THREE.BufferAttribute(new Float32Array([
+        0,0.35,-0.2,  0,3.3,0.0,  0,0.45,2.3
+      ]),3));
+      sg.computeVertexNormals();
+      const sail=new THREE.Mesh(sg, new THREE.MeshStandardMaterial({color:0xf0e2c5, roughness:0.95, side:THREE.DoubleSide, emissive:0x3a2c14, emissiveIntensity:0.15}));
+      ship.add(sail);
+      ship.scale.setScalar(1.2);
+    })();
+    scene.add(ship);
+    // park ship at home station
+    let shipPos=new THREE.Vector3(STATIONS[0].pos[0],0,STATIONS[0].pos[1]);
+    let shipHeading=0;
+
+    // ---- CAMERA RIG (custom spherical, draggable) ----
+    const camState={ R:128, theta:0.0, phi:0.86, tgt:new THREE.Vector3(-4,0,4) };
+    const camGoal={ R:128, tgt:new THREE.Vector3(-4,0,4) };
+    function applyCam(){
+      camState.tgt.lerp(camGoal.tgt, 0.06);
+      camState.R += (camGoal.R-camState.R)*0.06;
+      const sp=camState.phi, st=camState.theta, R=camState.R;
+      camera.position.set(
+        camState.tgt.x + R*Math.sin(sp)*Math.sin(st),
+        camState.tgt.y + R*Math.cos(sp),
+        camState.tgt.z + R*Math.sin(sp)*Math.cos(st)
+      );
+      camera.lookAt(camState.tgt);
+    }
+
+    // pointer / drag handling
+    const raycaster=new THREE.Raycaster();
+    const ndc=new THREE.Vector2();
+    let down=null, dragging=false, sailing=false;
+    const dom=renderer.domElement;
+    function pointerDown(e){ const p=evtPos(e); down={x:p.x,y:p.y,t:performance.now()}; dragging=false; if(idleTween){ idleTween.kill(); idleTween=null; } }
+    function pointerMove(e){
+      if(!down) return;
+      const p=evtPos(e); const dx=p.x-down.x, dy=p.y-down.y;
+      if(!dragging && Math.hypot(dx,dy)>7) dragging=true;
+      if(dragging){
+        camState.theta -= dx*0.005;
+        camState.phi = Math.min(1.28, Math.max(0.42, camState.phi - dy*0.004));
+        down.x=p.x; down.y=p.y;
+      }
+    }
+    function pointerUp(e){
+      if(down && !dragging && performance.now()-down.t<500){
+        const p=evtPos(e); pick(p.x,p.y);
+      }
+      down=null; dragging=false;
+    }
+    function evtPos(e){ const t=e.touches?e.touches[0]:(e.changedTouches?e.changedTouches[0]:e); return {x:t.clientX, y:t.clientY}; }
+    dom.addEventListener('pointerdown', pointerDown);
+    window.addEventListener('pointermove', pointerMove, {passive:true});
+    window.addEventListener('pointerup', pointerUp);
+    dom.addEventListener('wheel', e=>{ e.preventDefault(); camGoal.R=Math.min(180,Math.max(58, camGoal.R + e.deltaY*0.08)); }, {passive:false});
+    // pinch zoom
+    let pinch=0;
+    dom.addEventListener('touchstart', e=>{ if(e.touches.length===2){ pinch=Math.hypot(e.touches[0].clientX-e.touches[1].clientX, e.touches[0].clientY-e.touches[1].clientY); } }, {passive:true});
+    dom.addEventListener('touchmove', e=>{ if(e.touches.length===2){ const d=Math.hypot(e.touches[0].clientX-e.touches[1].clientX, e.touches[0].clientY-e.touches[1].clientY); if(pinch){ camGoal.R=Math.min(180,Math.max(58, camGoal.R-(d-pinch)*0.25)); } pinch=d; down=null; } }, {passive:true});
+
+    function pick(cx,cy){
+      if(sailing) return;
+      ndc.x=(cx/window.innerWidth)*2-1; ndc.y=-(cy/window.innerHeight)*2+1;
+      raycaster.setFromCamera(ndc, camera);
+      const hits=raycaster.intersectObjects(stationObjs, true);
+      if(hits.length){
+        let o=hits[0].object; while(o && o.userData.index===undefined) o=o.parent;
+        if(o) sailTo(o.userData.index);
+      }
+    }
+
+    // ----------------------------------------------------------------------
+    //  UI  &  STATE
+    // ----------------------------------------------------------------------
+    const labelsEl=document.getElementById('labels');
+    const labelEls=STATIONS.map((st,i)=>{
+      const d=document.createElement('div'); d.className='label faded';
+      d.innerHTML=`<div class="pin"></div><div class="nm">${st.name}</div><span class="sea">${st.sea}</span>`;
+      d.addEventListener('click', ev=>{ ev.stopPropagation(); sailTo(i); });
+      labelsEl.appendChild(d); return d;
+    });
+
+    const visited=new Array(STATIONS.length).fill(false);
+    let currentIdx=0;
+
+    // voyage log
+    const logList=document.getElementById('logList');
+    const logEls=STATIONS.map((st,i)=>{
+      const li=document.createElement('li');
+      li.innerHTML=`<span class="dot"></span><span class="n">${st.name}</span>`;
+      li.addEventListener('click', ()=>sailTo(i));
+      logList.appendChild(li); return li;
+    });
+    function updateLog(){
+      let n=0;
+      logEls.forEach((li,i)=>{ li.classList.toggle('done',visited[i]); li.classList.toggle('active',i===currentIdx); if(visited[i])n++; });
+      document.getElementById('logCount').textContent=`${n} / ${STATIONS.length} charted`;
+    }
+    const logEl=document.getElementById('log');
+    document.getElementById('logHead').addEventListener('click', ()=>logEl.classList.toggle('tucked'));
+
+    // chart panel
+    const chart=document.getElementById('chart');
+    const chartScroll=document.getElementById('chartScroll');
+    function nextHintText(i){
+      // suggest an unvisited neighbour
+      const nb=ROUTES.filter(r=>r.includes(i)).map(r=>r[0]===i?r[1]:r[0]).filter(j=>!visited[j]);
+      if(nb.length) return `Chart your course onward — perhaps to ${STATIONS[nb[0]].name}.`;
+      const any=visited.findIndex(v=>!v);
+      if(any>=0) return `Still uncharted: ${STATIONS[any].name}.`;
+      return `Every shore is charted. Your introduction is complete — now choose your heading.`;
+    }
+    function openChart(i){
+      const st=STATIONS[i];
+      chartScroll.innerHTML=`
+        <div class="marker">Sea-Chart · ${String(i+1).padStart(2,'0')} of ${String(STATIONS.length).padStart(2,'0')}</div>
+        <h2>${st.name}</h2>
+        <div class="sub">${st.sea}</div>
+        <div class="rule"></div>
+        <div class="body">${st.body}</div>
+        <div class="pull">${st.pull}</div>
+        <div class="foot"><span class="hintnext">${nextHintText(i)}</span></div>`;
+      chartScroll.scrollTop=0;
+      chart.classList.add('open');
+    }
+    document.getElementById('chartClose').addEventListener('click', ()=>chart.classList.remove('open'));
+
+    function markLabels(){
+      labelEls.forEach((d,i)=>{
+        d.classList.toggle('visited', visited[i]);
+        d.classList.toggle('current', i===currentIdx);
+        d.classList.toggle('faded', !visited[i] && i!==currentIdx);
+      });
+    }
+
+    // ---- sailing ----
+    function sailTo(i){
+      if(sailing) return;
+      if(i===currentIdx){ openChart(i); visited[i]=true; markLabels(); updateLog(); return; }
+      document.getElementById('hint').classList.remove('show');
+      chart.classList.remove('open');
+      sailing=true;
+      const from=currentIdx;
+      const pts=arcPoints(from,i,1);
+      // ensure forward direction goes from `from` to `i`
+      const total=pts.length-1;
+      camGoal.tgt.set(STATIONS[i].pos[0],0,STATIONS[i].pos[1]);
+      camGoal.R=86;
+      const prog={t:0};
+      gsap.to(prog,{ t:1, duration:2.6, ease:"power2.inOut",
+        onUpdate:()=>{
+          const f=prog.t*total; const idx=Math.min(total-1,Math.floor(f)); const fr=f-idx;
+          const a=pts[idx], b=pts[idx+1];
+          shipPos.x=a.x+(b.x-a.x)*fr; shipPos.z=a.z+(b.z-a.z)*fr;
+          shipHeading=Math.atan2(b.x-a.x, b.z-a.z);
+        },
+        onComplete:()=>{
+          sailing=false; currentIdx=i; visited[i]=true;
+          markLabels(); updateLog(); openChart(i);
+        }
+      });
+    }
+
+    // ----------------------------------------------------------------------
+    //  AMBIENT SOUND (filtered noise = surf) — user toggled
+    // ----------------------------------------------------------------------
+    let audioCtx=null, surfGain=null, soundOn=false;
+    function initAudio(){
+      try{
+        audioCtx=new (window.AudioContext||window.webkitAudioContext)();
+        const bufSize=2*audioCtx.sampleRate;
+        const noiseBuf=audioCtx.createBuffer(1,bufSize,audioCtx.sampleRate);
+        const data=noiseBuf.getChannelData(0);
+        for(let i=0;i<bufSize;i++) data[i]=Math.random()*2-1;
+        const noise=audioCtx.createBufferSource(); noise.buffer=noiseBuf; noise.loop=true;
+        const lp=audioCtx.createBiquadFilter(); lp.type='lowpass'; lp.frequency.value=520;
+        const lfo=audioCtx.createOscillator(); lfo.frequency.value=0.10;
+        const lfoGain=audioCtx.createGain(); lfoGain.gain.value=180;
+        lfo.connect(lfoGain); lfoGain.connect(lp.frequency);
+        surfGain=audioCtx.createGain(); surfGain.gain.value=0;
+        noise.connect(lp); lp.connect(surfGain); surfGain.connect(audioCtx.destination);
+        noise.start(); lfo.start();
+      }catch(e){ audioCtx=null; }
+    }
+    const soundBtn=document.getElementById('sound');
+    soundBtn.addEventListener('click', ()=>{
+      if(!audioCtx) initAudio();
+      if(!audioCtx) return;
+      if(audioCtx.state==='suspended') audioCtx.resume();
+      soundOn=!soundOn;
+      soundBtn.classList.toggle('muted', !soundOn);
+      if(surfGain) gsap.to(surfGain.gain,{value: soundOn?0.16:0.0, duration:0.8});
+    });
+
+    // ----------------------------------------------------------------------
+    //  RENDER LOOP
+    // ----------------------------------------------------------------------
+    const clock=new THREE.Clock();
+    let t=0;
+    function tick(){
+      const dt=clock.getDelta(); t+=dt;
+      oceanMat.uniforms.uTime.value=t;
+      skyMat.uniforms.uSunDir.value=SUN_DIR;
+      scene.traverse(o=>{ if(o.isPoints && o.material.uniforms) o.material.uniforms.uTime.value=t; });
+
+      // ship float
+      const wy=waveHeight(shipPos.x,shipPos.z,t);
+      ship.position.set(shipPos.x, wy*0.55+0.15, shipPos.z);
+      const tgtRot=shipHeading;
+      ship.rotation.y += (tgtRot-ship.rotation.y)*0.12;
+      const slopeX=waveHeight(shipPos.x+2,shipPos.z,t)-waveHeight(shipPos.x-2,shipPos.z,t);
+      const slopeZ=waveHeight(shipPos.x,shipPos.z+2,t)-waveHeight(shipPos.x,shipPos.z-2,t);
+      ship.rotation.z=-slopeX*0.06 + Math.sin(t*1.3)*0.02;
+      ship.rotation.x= slopeZ*0.05;
+
+      // drowned orb pulse
+      stationObjs.forEach(g=>{ if(g.userData.glowOrb){ const s=1+Math.sin(t*2.4)*0.25; g.userData.glowOrb.scale.setScalar(s);} });
+
+      applyCam();
+      renderer.render(scene,camera);
+
+      // project labels
+      const w=window.innerWidth, h=window.innerHeight;
+      STATIONS.forEach((st,i)=>{
+        const peak=new THREE.Vector3(st.pos[0], st.type==='drowned'?5:(st.type==='spire'?16:12), st.pos[1]);
+        const v=peak.project(camera);
+        const el=labelEls[i];
+        if(v.z>1 || v.x<-1.3||v.x>1.3||v.y<-1.3||v.y>1.3){ el.style.display='none'; return; }
+        el.style.display='block';
+        el.style.left=((v.x*0.5+0.5)*w)+'px';
+        el.style.top=((-v.y*0.5+0.5)*h)+'px';
+      });
+
+      requestAnimationFrame(tick);
+    }
+    tick();
+
+    // resize
+    window.addEventListener('resize', ()=>{
+      camera.aspect=window.innerWidth/window.innerHeight; camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+
+    // ----------------------------------------------------------------------
+    //  INTRO SEQUENCE
+    // ----------------------------------------------------------------------
+    const intro=document.getElementById('intro');
+    gsap.set('#intro .kicker',{y:14}); gsap.set('#intro h1',{y:24}); gsap.set('#intro .blurb',{y:14}); gsap.set('#intro button',{y:14}); gsap.set('#intro .by',{});
+    gsap.timeline()
+      .to('#intro .kicker',{opacity:1,y:0,duration:1.0,ease:'power2.out',delay:0.3})
+      .to('#intro h1',{opacity:1,y:0,duration:1.2,ease:'power3.out'},'-=0.6')
+      .to('#intro .blurb',{opacity:1,y:0,duration:1.0,ease:'power2.out'},'-=0.6')
+      .to('#intro button',{opacity:1,y:0,duration:0.8,ease:'power2.out'},'-=0.4')
+      .to('#intro .by',{opacity:1,duration:1.0},'-=0.3');
+
+    document.getElementById('begin').addEventListener('click', ()=>{
+      intro.classList.add('gone');
+      setTimeout(()=>{ intro.style.display='none'; }, 1200);
+      // reveal overview, then ease toward home isle and open its chart
+      markLabels(); updateLog();
+      logEl.classList.remove('tucked');
+      setTimeout(()=>logEl.classList.add('tucked'), 2600);
+      gsap.to(camGoal,{ R:96, duration:2.4, ease:'power2.inOut' });
+      camGoal.tgt.set(STATIONS[0].pos[0],0,STATIONS[0].pos[1]);
+      setTimeout(()=>{
+        document.getElementById('hint').classList.add('show');
+        visited[0]=true; markLabels(); updateLog(); openChart(0);
+      }, 1400);
+    });
+
+    // gentle idle camera drift before first interaction
+    let idleTween=gsap.to(camState,{ theta:0.18, duration:18, ease:'sine.inOut', yoyo:true, repeat:-1 });
+
+  })();
+  </script>
+</body>
+</html>
